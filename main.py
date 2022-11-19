@@ -1,5 +1,12 @@
-from fastapi import FastAPI, HTTPException, Query, Body
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import Session
+
+import crud
+import models
+import schemas
+from database import engine, SessionLocal
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -26,76 +33,27 @@ users = [{"jmeno": "Petr",
          ]
 
 
-class User(BaseModel):
-    user: str
-
-
-class Transaction(BaseModel):
-    dluznik: str
-    veritel: str
-    suma: float
-
-
-class UserList(BaseModel):
-    uzivatele: list[str] = Query()
-def get_sum_of_amounts():
-    for i, j in enumerate(users):
-        amount = sum(users[i]['dluzi'].values()) + sum(users[i]['dluzi_mu'].values())
-        users[i]['suma'] = amount
+def get_db():
+    try:
+        db = SessionLocal()
+        yield db
+    finally:
+        db.close()
 
 
 @app.get('/users')
-async def get_users(uzivatele: dict = Body()):
-    get_sum_of_amounts()
-    if uzivatele:
-        result = []
-        for i, j in enumerate(users):
-            if users[i]['jmeno'] in uzivatele:
-                result.append(users[i])
-        return result.sort()
-    else:
-        return users
+async def get_users(db: Session = Depends(get_db)):
+    return crud.get_all_users_with_data(db)
 
 
 @app.post('/add')
-async def add_new_user(user: User):
-    for i, j in enumerate(users):
-        if j['jmeno'] == user.user:
-            raise HTTPException(status_code=400, detail="Jméno už je v seznamu.")
-    new_user = {
-        'jmeno': user.user,
-        'dluzi': {},
-        'dluzi_mu': {},
-        'suma': ""
-    }
-    users.append(new_user)
-    return new_user
+async def add_new_user(new_user: schemas.UserBase, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_name(db, user_name=new_user.user)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Uživatel už existuje.")
+    return crud.create_user(db, new_user)
 
 
 @app.post('/transaction')
-async def make_transaction(transaction: Transaction):
-    # adding data to debtor
-    names_of_users = [i['jmeno'] for i in users]
-    if transaction.dluznik not in names_of_users or transaction.veritel not in names_of_users:
-        raise HTTPException(status_code=400, detail="Zadali jste jméno, které se v seznamu nenachází.")
-    for i, j in enumerate(users):
-        if users[i]['jmeno'] == transaction.dluznik:
-            if transaction.veritel in users[i]['dluzi']:
-                users[i]['dluzi'][transaction.veritel] += transaction.suma
-            else:
-                users[i]['dluzi'][transaction.veritel] = transaction.suma
-
-    # adding data to creditor
-    for i, j in enumerate(users):
-        if users[i]['jmeno'] == transaction.veritel:
-            if transaction.dluznik in users[i]['dluzi_mu']:
-                users[i]['dluzi_mu'][transaction.dluznik] += transaction.suma
-            else:
-                users[i]['dluzi_mu'][transaction.dluznik] = transaction.suma
-    get_sum_of_amounts()
-    result = []
-    for i, j in enumerate(users):
-        if users[i]['jmeno'] in [transaction.dluznik, transaction.veritel]:
-            result.append(users[i])
-
-    return result
+async def make_transaction(transaction: schemas.TransactionBase, db: Session = Depends(get_db)):
+    return crud.create_transaction(db=db, transaction=transaction)
