@@ -42,7 +42,9 @@ def get_db():
 
 
 @app.get('/users')
-async def get_users(db: Session = Depends(get_db)):
+async def get_users(db: Session = Depends(get_db), payload: schemas.UserList | None = None):
+    for i in payload:
+        if 
     return {"uzivatele": crud.get_all_users_with_data(db)}
 
 
