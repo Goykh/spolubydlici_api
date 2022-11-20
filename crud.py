@@ -10,29 +10,30 @@ def get_user_by_name(db: Session, user_name: str):
     return db.query(models.User).filter(models.User.name == user_name).first()
 
 
-def get_all_users_with_data(db: Session):
+def get_all_users_with_data(db: Session, user_name: str | None = None):
     users = []
+    if user_name:
+        creditors = get_who_user_owns_to(user_name=user_name)
+        debtors = get_who_owns_to_user(user_name=user_name)
+        user_dict = {
+            "jmeno": user_name,
+            "dluzi": creditors,
+            "dluzi_mu": debtors,
+            "suma": get_sum(debtors, creditors)
+        }
+        return user_dict
     for user in db.query(models.User.name).all():
         name = "".join([i for i in user])
+        creditors = get_who_user_owns_to(user_name=name)
+        debtors = get_who_owns_to_user(user_name=name)
         user_dict = {
             "jmeno": name,
-            "dluzi": get_who_user_owns_to(user_name=name),
-            "dluzi_mu": get_who_owns_to_user(user_name=name),
-            "suma": get_sum(get_who_owns_to_user(user_name=name), get_who_user_owns_to(user_name=name))
+            "dluzi": creditors,
+            "dluzi_mu": debtors,
+            "suma": get_sum(debtors, creditors)
         }
         users.append(user_dict)
     return users
-
-
-def get_user_data_by_name(db: Session, user_name: str):
-    name = db.query(models.User).filter(models.User.name == user_name)
-    user_dict = {
-        "jmeno": name,
-        "dluzi": get_who_user_owns_to(user_name=name),
-        "dluzi_mu": get_who_owns_to_user(user_name=name),
-        "suma": get_sum(get_who_owns_to_user(user_name=name), get_who_user_owns_to(user_name=name))
-    }
-    return user_dict
 
 
 def create_user(db: Session, user: schemas.UserBase):
@@ -44,7 +45,6 @@ def create_user(db: Session, user: schemas.UserBase):
 
 
 def create_transaction(db: Session, transaction: schemas.TransactionBase):
-    # TODO: error handling
     db_debtor = db.query(models.User).filter(models.User.name == transaction.dluznik).first()
     db_creditor = db.query(models.User).filter(models.User.name == transaction.veritel).first()
 
@@ -55,7 +55,6 @@ def create_transaction(db: Session, transaction: schemas.TransactionBase):
     filter_list = [db_debtor.name, db_creditor.name]
     users_dict = get_all_users_with_data(db)
     result = []
-    print(users_dict)
     for i, j in enumerate(users_dict):
         if j["jmeno"] in filter_list:
             result.append(j)

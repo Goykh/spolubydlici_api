@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Path
 from sqlalchemy.orm import Session
 
 import crud
@@ -6,31 +6,10 @@ import models
 import schemas
 from database import engine, SessionLocal
 
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-users = [{"jmeno": "Petr",
-          "dluzi": {
-              "Pavel": 15.0,
-              "Jiri": 1.0,
-              "Dan": 4.5
-          },
-          "dluzi_mu": {
-              "Jakub": 2.5,
-              "Pavel": 6.75,
-          },
-          "suma": ""},
-         {"jmeno": "Pavel",
-          "dluzi": {
-              "Petr": 6.75,
-              "Dan": 1.0
-          },
-          "dluzi_mu": {
-              'Petr': 15.0
-          },
-          "suma": ""}
-         ]
 
 
 def get_db():
@@ -42,11 +21,16 @@ def get_db():
 
 
 @app.get('/users')
-async def get_users(db: Session = Depends(get_db), payload: schemas.UserList | None = None):
-    for i in payload:
-        if 
+async def get_users(db: Session = Depends(get_db)):
     return {"uzivatele": crud.get_all_users_with_data(db)}
 
+
+@app.get('/users/{user_name}')
+async def get_user_by_name(db: Session = Depends(get_db), user_name: str = Path(title="what")):
+    db_user = crud.get_user_by_name(db, user_name=user_name)
+    if db_user:
+        return {"uzivatel": crud.get_all_users_with_data(db, user_name=user_name)}
+    raise HTTPException(status_code=400, detail="Uživatel neexistuje.")
 
 @app.post('/add')
 async def add_new_user(new_user: schemas.UserBase, db: Session = Depends(get_db)):
