@@ -7,10 +7,17 @@ import schemas
 
 
 def get_user_by_name(db: Session, user_name: str):
+    """
+    Looks for the name in the db.
+    """
     return db.query(models.User).filter(models.User.name == user_name).first()
 
 
 def get_all_users_with_data(db: Session, user_name: str | None = None):
+    """
+    Gets all the users with all their data,
+    or only one user if user_name param has been provided.
+    """
     users = []
     if user_name:
         creditors = get_who_user_owns_to(user_name=user_name)
@@ -37,6 +44,9 @@ def get_all_users_with_data(db: Session, user_name: str | None = None):
 
 
 def create_user(db: Session, user: schemas.UserBase):
+    """
+    Creates user for db.
+    """
     db_user = models.User(name=user.user)
     db.add(db_user)
     db.commit()
@@ -45,6 +55,10 @@ def create_user(db: Session, user: schemas.UserBase):
 
 
 def create_transaction(db: Session, transaction: schemas.TransactionBase):
+    """
+    Creates a transaction.
+    Returns a both objects ordered by "jmeno".
+    """
     db_debtor = db.query(models.User).filter(models.User.name == transaction.dluznik).first()
     db_creditor = db.query(models.User).filter(models.User.name == transaction.veritel).first()
 
@@ -63,6 +77,10 @@ def create_transaction(db: Session, transaction: schemas.TransactionBase):
 
 
 def get_who_owns_to_user(user_name: str):
+    """
+    Gets a dictionary of names that own to a user and the amount.
+    I couldn't get this query work with sqalchemy so I had to use sqlite3.
+    """
     conn = sqlite3.connect('users.db')
     cur = conn.cursor()
     cur.execute(f"""SELECT u2.name, sum(t.amount) FROM transactions t
@@ -77,6 +95,10 @@ def get_who_owns_to_user(user_name: str):
 
 
 def get_who_user_owns_to(user_name: str):
+    """
+    Gets a dictionary of names that user owns to and the amount.
+    I couldn't get this query work with sqalchemy so I had to use sqlite3.
+    """
     conn = sqlite3.connect('users.db')
     cur = conn.cursor()
     cur.execute(f"""SELECT u2.name, sum(t.amount) FROM transactions t
@@ -91,6 +113,9 @@ def get_who_user_owns_to(user_name: str):
 
 
 def get_sum(debtors: dict, creditors: dict):
+    """
+    Gets the sum of total debt + total credit.
+    """
     debt_sum = sum(debtors.values())
     credit_sum = sum(creditors.values())
     return debt_sum + credit_sum
