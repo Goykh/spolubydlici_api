@@ -21,7 +21,7 @@ def get_all_users_with_data(db: Session):
             "suma": get_sum(get_who_owns_to_user(user_name=name), get_who_user_owns_to(user_name=name))
         }
         users.append(user_dict)
-    return {"uzivatele": users}
+    return users
 
 
 def get_user_data_by_name(db: Session, user_name: str):
@@ -54,7 +54,11 @@ def create_transaction(db: Session, transaction: schemas.TransactionBase):
     db.refresh(db_transaction)
     filter_list = [db_debtor.name, db_creditor.name]
     users_dict = get_all_users_with_data(db)
-    result = [d for d in users_dict if d["jmeno"] in filter_list]
+    result = []
+    print(users_dict)
+    for i, j in enumerate(users_dict):
+        if j["jmeno"] in filter_list:
+            result.append(j)
     sorted_result = sorted(result, key=lambda key: key["jmeno"])
     return sorted_result
 

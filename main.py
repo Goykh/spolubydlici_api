@@ -43,7 +43,7 @@ def get_db():
 
 @app.get('/users')
 async def get_users(db: Session = Depends(get_db)):
-    return crud.get_all_users_with_data(db)
+    return {"uzivatele": crud.get_all_users_with_data(db)}
 
 
 @app.post('/add')

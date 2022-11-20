@@ -1,4 +1,3 @@
-from fastapi import Query
 from pydantic import BaseModel
 
 
@@ -10,6 +9,3 @@ class TransactionBase(BaseModel):
     veritel: str
     dluznik: str
     castka: float
-
-
-
