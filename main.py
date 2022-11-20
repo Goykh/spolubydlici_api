@@ -56,4 +56,8 @@ async def add_new_user(new_user: schemas.UserBase, db: Session = Depends(get_db)
 
 @app.post('/transaction')
 async def make_transaction(transaction: schemas.TransactionBase, db: Session = Depends(get_db)):
+    db_debtor = crud.get_user_by_name(db, user_name=transaction.dluznik)
+    db_creditor = crud.get_user_by_name(db, user_name=transaction.veritel)
+    if not db_debtor or not db_creditor:
+        raise HTTPException(status_code=400, detail="Zadaný uživatel neexistuje.")
     return crud.create_transaction(db=db, transaction=transaction)
